@@ -1,0 +1,155 @@
+/* Sim page: full-viewport stage with floating HUD. */
+body.sim-page { background: #0e1116; }
+
+#stage {
+  position: relative;
+  height: 100dvh;
+  background: radial-gradient(120% 90% at 50% 10%, #2a3644 0%, #141a22 55%, #0e1116 100%);
+  overflow: hidden;
+  touch-action: none;
+}
+#stage canvas { display: block; }
+
+.hud {
+  position: absolute;
+  z-index: 5;
+  color: #dde3ea;
+  background: rgba(16, 20, 26, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
+.sim-top {
+  top: 0.8rem;
+  left: 0.8rem;
+  right: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.92rem;
+}
+.sim-top .back { color: #9fc4e8; white-space: nowrap; }
+.sim-title { font-weight: 600; }
+#stats {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  color: #8b98a7;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.sim-help {
+  bottom: 0.9rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  color: #aeb9c6;
+  white-space: nowrap;
+}
+.sim-help b { color: #dde3ea; font-weight: 600; }
+
+/* joystick pads */
+#pads {
+  position: absolute;
+  z-index: 5;
+  left: 1rem;
+  bottom: 3.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+}
+.pad {
+  position: relative;
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: grab;
+}
+.pad.pad-h { width: 108px; height: 44px; border-radius: 999px; }
+.pad .knob {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(158, 196, 232, 0.85);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+.pad.pad-h .knob { width: 30px; height: 30px; }
+
+/* control panel */
+#panel {
+  top: 4.4rem;
+  right: 0.8rem;
+  width: 240px;
+  padding: 0.55rem 0.9rem 0.8rem;
+  font-size: 0.88rem;
+}
+#panel summary { cursor: pointer; font-weight: 600; user-select: none; }
+#panel label { display: block; margin-top: 0.65rem; color: #aeb9c6; }
+#panel input[type="range"] { width: 100%; accent-color: #4a9eea; }
+#panel .check { display: flex; gap: 0.5rem; align-items: center; }
+#panel .btnrow { display: flex; gap: 0.5rem; margin-top: 0.8rem; }
+#panel button {
+  flex: 1;
+  padding: 0.4rem 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: #dde3ea;
+  cursor: pointer;
+}
+#panel button:hover { background: rgba(255, 255, 255, 0.16); }
+
+/* loading overlay */
+#overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  background: #12161c;
+  transition: opacity 0.5s ease;
+}
+#overlay.hidden { opacity: 0; pointer-events: none; }
+.overlay-card { text-align: center; color: #aeb9c6; max-width: 420px; padding: 1rem; }
+.overlay-card code { color: #e08b8b; font-size: 0.8rem; word-break: break-all; }
+#overlay.error .spinner { display: none; }
+.spinner {
+  width: 42px;
+  height: 42px;
+  margin: 0 auto 1rem;
+  border: 3px solid rgba(158, 196, 232, 0.25);
+  border-top-color: #9fc4e8;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.bar {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  margin-top: 0.8rem;
+}
+.bar > div { height: 100%; width: 0%; background: #4a9eea; transition: width 0.2s ease; }
+
+/* notes below the stage */
+.sim-notes {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 3.5rem;
+}
+.sim-notes .fineprint { color: var(--muted); font-size: 0.85rem; }
+
+@media (max-width: 700px) {
+  .sim-help { display: none; }
+  .sim-title { display: none; }
+  #panel { width: 210px; }
+}

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jean Elsner — robotics research</title>
+  <meta name="description" content="Jean Elsner — robotics researcher at TUM. Physical human–robot interaction, the GARMI assistive humanoid, and open-source robot software." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <span class="brand">Jean Elsner</span>
+    <nav>
+      <a href="#projects">Projects</a>
+      <a href="https://github.com/JeanElsner">GitHub</a>
+      <a href="mailto:jean.elsner@tum.de">Contact</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>Robots that work <em>with</em> people.</h1>
+      <p>
+        I'm a robotics researcher at the Technical University of Munich,
+        working on physical human–robot interaction, embodied AI and the
+        <strong>GARMI</strong> assistive humanoid for geriatric care.
+      </p>
+      <div class="cta">
+        <a class="button primary" href="garmi/">▶ Drive GARMI in your browser</a>
+        <a class="button" href="https://github.com/JeanElsner">GitHub</a>
+      </div>
+    </section>
+
+    <section id="projects">
+      <h2>Projects</h2>
+      <div class="cards">
+        <a class="card feature" href="garmi/">
+          <img src="/img/garmi-card.jpg" alt="The GARMI robot" />
+          <div class="card-body">
+            <h3>GARMI — live simulation</h3>
+            <p>The full robot — mecanum base, telescoping torso, two Franka
+              arms — simulated with MuJoCo physics, in your browser. Drive it
+              around, move the head, open the grippers.</p>
+            <span class="more">Launch →</span>
+          </div>
+        </a>
+        <a class="card" href="https://github.com/geriatronics/garmi_description">
+          <div class="card-body">
+            <h3>garmi_description</h3>
+            <p>The open GARMI robot model: URDF for ROS 2 / Gazebo and a
+              simulation-ready MuJoCo MJCF with a physical mecanum base.</p>
+            <span class="more">github.com/geriatronics/garmi_description →</span>
+          </div>
+        </a>
+        <a class="card" href="https://github.com/geriatronics/franka_desk">
+          <div class="card-body">
+            <h3>franka_desk</h3>
+            <p>Python client for the Franka Desk REST API with a ROS 2
+              bringup wrapper — unlock, guide and configure the arms from code.</p>
+            <span class="more">github.com/geriatronics/franka_desk →</span>
+          </div>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2026 Jean Elsner · built with <a href="https://threejs.org/">three.js</a>
+      and <a href="https://github.com/google-deepmind/mujoco/tree/main/wasm">MuJoCo WASM</a></p>
+  </footer>
+</body>
+</html>

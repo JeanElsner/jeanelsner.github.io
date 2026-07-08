@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GARMI — interactive simulation · Jean Elsner</title>
+  <meta name="description" content="Drive the GARMI assistive humanoid in a real MuJoCo physics simulation, running entirely in your browser via WebAssembly." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body class="sim-page">
+  <div id="stage">
+    <div id="overlay">
+      <div class="overlay-card">
+        <div class="spinner"></div>
+        <p id="overlay-msg">Loading…</p>
+        <div class="bar"><div id="overlay-bar"></div></div>
+      </div>
+    </div>
+
+    <header class="sim-top hud">
+      <a href="../" class="back">← jean elsner</a>
+      <span class="sim-title">GARMI · MuJoCo in the browser</span>
+      <span id="stats"></span>
+    </header>
+
+    <div class="sim-help hud">
+      <b>W A S D</b> drive · <b>Q E</b> turn · <b>R</b> reset · <b>Space</b> pause · drag to orbit
+    </div>
+
+    <div id="pads">
+      <div id="pad-move" class="pad hud" title="drive"><div class="knob"></div></div>
+      <div id="pad-rot" class="pad pad-h hud" title="turn"><div class="knob"></div></div>
+    </div>
+
+    <details id="panel" class="hud">
+      <summary>Controls</summary>
+      <label>Head pan <input id="s-pan" type="range" min="-1.57" max="1.57" step="0.01" value="0" /></label>
+      <label>Head tilt <input id="s-tilt" type="range" min="-0.785" max="0.785" step="0.01" value="0" /></label>
+      <label>Lift <input id="s-lift" type="range" min="0" max="0.4" step="0.005" value="0" /></label>
+      <label>Grippers <input id="s-grip" type="range" min="0" max="255" step="1" value="255" /></label>
+      <label class="check"><input id="t-loop" type="checkbox" checked /> closed-loop base twist</label>
+      <label class="check"><input id="t-follow" type="checkbox" checked /> camera follows robot</label>
+      <div class="btnrow">
+        <button id="b-reset">Reset (R)</button>
+        <button id="b-pause">Pause</button>
+      </div>
+    </details>
+  </div>
+
+  <section class="sim-notes">
+    <h2>What you're looking at</h2>
+    <p>
+      This is not a video or a canned animation — it is the
+      <a href="https://github.com/geriatronics/garmi_description">GARMI robot model</a>
+      running in <a href="https://mujoco.org/">MuJoCo</a>, compiled to
+      WebAssembly and stepped live in your browser at 500&nbsp;Hz. GARMI is an
+      assistive humanoid developed for geriatric care research: a mecanum-wheel
+      mobile base, a telescoping torso, a pan–tilt head and two Franka Research 3 arms.
+    </p>
+    <p>
+      The base is a free-floating rigid body; each wheel carries free-spinning
+      45° rollers, so the omnidirectional motion you feel when driving emerges
+      from contact physics, not from scripted kinematics. Driving uses the same
+      feedforward-plus-proportional twist controller as our simulation tooling —
+      toggle <em>closed-loop</em> off to feel the raw open-loop mecanum drift.
+    </p>
+    <p class="fineprint">
+      Built with the official <a href="https://github.com/google-deepmind/mujoco/tree/main/wasm">MuJoCo WASM bindings</a>
+      and <a href="https://threejs.org/">three.js</a>. Visual meshes are
+      decimated for the web; physics runs the full model (94 joints).
+      Model © Technical University of Munich, Apache-2.0; FR3 meshes from
+      <a href="https://github.com/google-deepmind/mujoco_menagerie">MuJoCo Menagerie</a>.
+    </p>
+  </section>
+
+  <script>
+    // Open the control panel by default on large screens.
+    if (matchMedia('(min-width: 900px)').matches) {
+      document.getElementById('panel').open = true;
+    }
+  </script>
+  <script type="module" src="/src/garmi/sim.js"></script>
+</body>
+</html>
