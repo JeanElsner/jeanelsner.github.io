@@ -60,7 +60,11 @@ function setProgress(msg, frac = null) {
 function fail(err) {
   console.error(err, stderrTail);
   overlay.classList.add('error');
-  overlayMsg.innerHTML = `Simulation failed to start.<br><code>${err}</code>` +
+  const oom = /abort|out of memory|allocat|RangeError/i.test(String(err) + stderrTail.join(' '));
+  const hint = oom
+    ? '<br>This browser ran out of memory compiling the model — on phones, Chrome currently handles this page best.'
+    : '';
+  overlayMsg.innerHTML = `Simulation failed to start.${hint}<br><code>${err}</code>` +
     (stderrTail.length ? `<br><code>${stderrTail.slice(-3).join('<br>')}</code>` : '');
 }
 
@@ -82,14 +86,19 @@ async function main() {
     fetchAssets(),
   ]);
 
-  setProgress('Compiling model…', 1);
+  setProgress('Compiling physics model…', 1);
   await nextPaint();
 
   const vfs = new mujoco.MjVFS();
   for (const [path, buf] of buffers) vfs.addBuffer(path, buf);
+  buffers.length = 0; // the VFS holds copies; let the JS side be collected
   const model = mujoco.MjModel.from_xml_path(sceneFile, vfs);
   if (!model) throw new Error('model compilation failed');
+  vfs.delete(); // model owns its data now; free ~35 MB of wasm heap
   const data = new mujoco.MjData(model);
+
+  setProgress('Building the scene…', 1);
+  await nextPaint();
 
   mujoco.mj_resetDataKeyframe(model, data, 0); // 'home' keyframe
   data.ctrl.set(model.key_ctrl.subarray(0, model.nu)); // hold arms/lift/head
@@ -105,11 +114,15 @@ async function main() {
   stage.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-  scene.environmentIntensity = 0.55;
-
   const hemi = new THREE.HemisphereLight(0xffffff, 0x667788, 0.5);
+  try {
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environmentIntensity = 0.55;
+  } catch (e) {
+    console.warn('[garmi] environment map unavailable, using lights only', e);
+    hemi.intensity = 1.1;
+  }
   scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xffffff, 2.2);
   sun.castShadow = true;
