@@ -26,12 +26,23 @@ const stderrTail = [];
 async function fetchAssets() {
   const manifest = await (await fetch(`${ASSET_ROOT}manifest.json`)).json();
   const files = manifest.files;
+  // Meshes are stored pre-gzipped (GitHub Pages doesn't compress .obj/.stl);
+  // inflate them here and hand MuJoCo the logical file name.
+  const gzipped = new Set(manifest.gzipped ?? []);
   let done = 0;
   let bytes = 0;
   const buffers = await Promise.all(files.map(async (path) => {
-    const res = await fetch(ASSET_ROOT + path);
+    const gz = gzipped.has(path);
+    const res = await fetch(ASSET_ROOT + path + (gz ? '.gz' : ''));
     if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
-    const buf = new Uint8Array(await res.arrayBuffer());
+    let buf = new Uint8Array(await res.arrayBuffer());
+    // Decompress only if the payload is actually gzip — some servers (e.g.
+    // Vite dev) serve .gz files with Content-Encoding and the browser has
+    // already inflated them; GitHub Pages hands over the raw bytes.
+    if (gz && buf[0] === 0x1f && buf[1] === 0x8b) {
+      const stream = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'));
+      buf = new Uint8Array(await new Response(stream).arrayBuffer());
+    }
     done += 1;
     bytes += buf.length;
     setProgress(`Downloading model — ${done}/${files.length} files, ${(bytes / 1e6).toFixed(1)} MB`,

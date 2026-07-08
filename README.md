@@ -30,8 +30,10 @@ npm run preview    # serve dist/ locally
 
 ## Robot model assets
 
-`public/garmi-sim/` holds a web-slimmed copy of the model (committed, ~25 MB;
-~5 MB gzipped over the wire). Regenerate after upstream model changes:
+`public/garmi-sim/` holds a web-slimmed copy of the model (~6 MB, committed
+pre-gzipped: GitHub Pages doesn't compress `.obj`/`.stl`, so meshes are stored
+as `.gz` and inflated in the browser via `DecompressionStream`). Regenerate
+after upstream model changes:
 
 ```sh
 pip install trimesh pillow

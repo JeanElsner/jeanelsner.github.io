@@ -4,13 +4,17 @@
 Reads the `mujoco/` folder of a garmi_description checkout and writes a
 slimmed copy to public/garmi-sim/:
 
-  - scene.xml / garmi.xml   copied verbatim
+  - scene.xml / garmi.xml   copied verbatim (GitHub Pages gzips XML itself)
   - *.stl                   re-exported as binary STL (geometry untouched)
   - *.obj                   text rewrite: float precision reduced, normals
                             dropped (MuJoCo regenerates them), UVs kept only
                             where the MJCF binds an image texture
   - *.png textures          downscaled to --tex-size
   - manifest.json           file list the JS loader fetches into the VFS
+
+Meshes are stored pre-gzipped (*.obj.gz / *.stl.gz) because GitHub Pages does
+not compress those content types; the loader inflates them with the browser's
+DecompressionStream. The manifest lists logical names plus which are gzipped.
 
 No mesh decimation. The visual OBJs (obj2mjcf / CAD exports) are unwelded
 "triangle soup" -- coincident edges are exact duplicates, not shared vertices
@@ -23,6 +27,7 @@ Usage:
 """
 import argparse
 import fnmatch
+import gzip
 import json
 import re
 import sys
@@ -119,13 +124,22 @@ def main() -> int:
     out_root = args.out.resolve()
     (out_root / "assets").mkdir(parents=True, exist_ok=True)
 
-    manifest, total_in, total_out = [], 0, 0
+    manifest, gzipped, total_in, total_out = [], [], 0, 0
 
     def emit(rel: str, src: Path, dst: Path):
         nonlocal total_in, total_out
         manifest.append(rel)
         total_in += src.stat().st_size
         total_out += dst.stat().st_size
+
+    def emit_gz(rel: str, src: Path, dst: Path):
+        # dst holds the uncompressed bytes; replace it with dst.gz on disk.
+        data = dst.read_bytes()
+        gz = dst.parent / (dst.name + ".gz")
+        gz.write_bytes(gzip.compress(data, 9, mtime=0))
+        dst.unlink()
+        gzipped.append(rel)
+        emit(rel, src, gz)
 
     for name in ("scene.xml", "garmi.xml"):
         dst = out_root / name
@@ -147,20 +161,24 @@ def main() -> int:
         if suffix == ".obj":
             keep_uv = any(fnmatch.fnmatch(rel_in_assets, g) for g in KEEP_UV_GLOBS)
             tris = rewrite_obj(src, dst, keep_uv)
+            emit_gz(str(rel), src, dst)
             print(f"  obj{'+uv' if keep_uv else '   '} {rel_in_assets:32} {tris:>7} tris  "
-                  f"{src.stat().st_size/1e6:6.2f} -> {dst.stat().st_size/1e6:5.2f} MB")
+                  f"{src.stat().st_size/1e6:6.2f} -> {(out_root / (str(rel) + '.gz')).stat().st_size/1e6:5.2f} MB gz")
         elif suffix == ".stl":
             convert_stl(src, dst)
+            emit_gz(str(rel), src, dst)
         elif suffix in (".png", ".jpg", ".jpeg"):
             convert_png(src, dst, args.tex_size)
+            emit(str(rel), src, dst)
             print(f"  texture {rel_in_assets:34} "
                   f"{src.stat().st_size/1e6:6.2f} -> {dst.stat().st_size/1e6:5.2f} MB")
         else:
             dst.write_bytes(src.read_bytes())
-        emit(str(rel), src, dst)
+            emit(str(rel), src, dst)
 
     (out_root / "manifest.json").write_text(
-        json.dumps({"scene": "scene.xml", "files": manifest}, indent=1))
+        json.dumps({"scene": "scene.xml", "files": manifest, "gzipped": gzipped},
+                   indent=1))
 
     print(f"\ntotal: {total_in/1e6:.1f} MB -> {total_out/1e6:.1f} MB "
           f"({len(manifest)} files) -> {out_root}")
