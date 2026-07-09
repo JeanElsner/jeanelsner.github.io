@@ -25,7 +25,7 @@
     </header>
 
     <div class="sim-help hud">
-      <b>W A S D</b> drive · <b>Q E</b> turn · <b>R</b> reset · <b>Space</b> pause · drag to orbit
+      <b>W A S D</b> drive · <b>Q E</b> turn · drag the <b>blue cubes</b> to move the arms · <b>R</b> reset · <b>Space</b> pause
     </div>
 
     <div id="pads">
@@ -64,6 +64,9 @@
       from contact physics, not from scripted kinematics. Driving uses the same
       feedforward-plus-proportional twist controller as our simulation tooling —
       toggle <em>closed-loop</em> off to feel the raw open-loop mecanum drift.
+      The blue cubes are Cartesian targets for the hands: drag one (it moves in
+      the camera plane — orbit to change direction) and a damped least-squares
+      differential IK steers the arm's joint position servos after it.
     </p>
     <p class="fineprint">
       Built with the official <a href="https://github.com/google-deepmind/mujoco/tree/main/wasm">MuJoCo WASM bindings</a>

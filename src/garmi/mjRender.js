@@ -210,7 +210,7 @@ function makeFloor() {
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#c8cdd4';
   ctx.fillRect(0, 0, size, size);
-  ctx.fillStyle = '#bdc3cc';
+  ctx.fillStyle = '#b2bac5';
   const cell = size / squares;
   for (let i = 0; i < squares; i++) {
     for (let j = 0; j < squares; j++) {

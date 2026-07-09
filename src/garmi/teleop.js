@@ -1,9 +1,17 @@
 // Twist teleoperation for the GARMI mecanum base.
 //
-// Direct port of garmi_description/mujoco/teleop.py (Apache-2.0, TUM):
+// Port of garmi_description/mujoco/teleop.py @ 0.1.1 (Apache-2.0, TUM):
 // mecanum inverse kinematics plus a feedforward + proportional controller on
 // the measured base twist ("perfect odometry" from the free joint velocity),
-// which cancels the open-loop drift of the free-roller mecanum model.
+// with a tightly-clamped yaw integral that cancels the residual rotation the
+// discrete-roller model induces while strafing.
+//
+// Web deviations from upstream: apply() runs once per physics substep with
+// h = timestep (an integral needs sim-time accounting -- per-frame wall-clock
+// integration over-integrates whenever the sim runs below realtime), and a
+// zero-command deadband brakes the wheels instead of closing the loop on
+// contact noise (at the relaxed 4 ms mobile timestep the P/I terms would
+// chase roller-contact jitter and creep the base).
 
 // Base geometry (matches garmi.xml / the URDF).
 export const WHEEL_R = 0.0759;          // wheel radius [m]
@@ -11,13 +19,19 @@ export const LXY = 0.319 + 0.2755;      // half wheelbase + half track [m]
 export const WHEEL_CLAMP = 10.0;        // rad/s, matches the actuator ctrlrange
 
 // Teleop maxima (a single axis stays within the wheel speed limit).
-export const VMAX = 0.7;                // m/s
+export const VMAX = 0.7;                // m/s (forward/back)
 export const WMAX = 1.2;                // rad/s
+// Like the real robot, strafing is noticeably slower than driving forward.
+export const LATERAL_SCALE = 0.6;
 
 // Feedforward compensates the open-loop DC gain (rotation is ~4x because the
 // free rollers let the base spin faster than no-slip kinematics predicts).
+// The small yaw integral cancels strafe-induced rotation; its tight clamp
+// bounds any windup.
 const FF = [1.0, 1.0, 0.25];
 const KP = [1.6, 1.6, 1.6];
+const KI = [0.0, 0.0, 2.5];
+const I_CLAMP = [0.5, 0.5, 0.1];
 
 const clamp = (v, lim) => Math.max(-lim, Math.min(lim, v));
 
@@ -44,6 +58,7 @@ export class BaseController {
     this.qposAdr = scalar(free.qposadr);
     this.dofAdr = scalar(free.dofadr);
     this.closedLoop = true;
+    this.integ = [0, 0, 0];
   }
 
   // Base twist (vx, vy, wz) in the base frame. For a free joint MuJoCo stores
@@ -66,15 +81,27 @@ export class BaseController {
     ];
   }
 
-  // Write wheel controls for the desired twist. Open loop ignores odometry.
-  apply(data, desired, dt) {
+  // Write wheel controls for the desired twist; call once per physics step
+  // of size h [s]. Open loop ignores odometry.
+  apply(data, desired, h) {
+    const ctrl = data.ctrl;
+    const meas = this.measureTwist(data);
+    // One control law, driving and idle alike (upstream behaviour): brake the
+    // measured twist toward the command with a tightly-clamped yaw integral.
+    // Velocity feedback commanding velocity is naturally damped, so the base
+    // settles without ringing when the command returns to zero (a position
+    // hold, by contrast, commands wheel velocity from a pose error and rings
+    // on the wheel servos' lag).
     let cmd = desired;
     if (this.closedLoop) {
-      const meas = this.measureTwist(data);
-      cmd = desired.map((d, k) => FF[k] * d + KP[k] * (d - meas[k]));
+      cmd = desired.map((d, k) => {
+        const e = d - meas[k];
+        this.integ[k] = Math.max(-I_CLAMP[k],
+          Math.min(I_CLAMP[k], this.integ[k] + KI[k] * e * h));
+        return FF[k] * d + KP[k] * e + this.integ[k];
+      });
     }
     const wheels = twistToWheels(cmd[0], cmd[1], cmd[2]);
-    const ctrl = data.ctrl;
     this.wheelIds.forEach((id, i) => { ctrl[id] = wheels[i]; });
   }
 

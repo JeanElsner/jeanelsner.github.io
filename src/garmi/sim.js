@@ -9,11 +9,20 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import loadMujoco from '@mujoco/mujoco';
 
 import { MjThreeScene } from './mjRender.js';
-import { BaseController, VMAX, WMAX } from './teleop.js';
+import { BaseController, VMAX, WMAX, LATERAL_SCALE } from './teleop.js';
+import { ArmIK } from './ik.js';
+import { EEHandles } from './handles.js';
 import { StickPad } from './joystick.js';
 import './garmi.css';
 
-const ASSET_ROOT = `${import.meta.env.BASE_URL}garmi-sim/`;
+// Mobile devices get a lighter mesh set: MuJoCo's in-browser compile costs
+// ~1.3 kB of wasm heap per triangle, which overwhelms 32-bit mobile browsers
+// (Android Firefox in particular). ?assets=full / ?assets=<name> overrides.
+const isMobile = navigator.userAgentData?.mobile
+  ?? /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+const assetVariant = new URLSearchParams(location.search).get('assets')
+  ?? (isMobile ? 'mobile2' : 'full');
+const ASSET_ROOT = `${import.meta.env.BASE_URL}garmi-sim${assetVariant !== 'full' ? `-${assetVariant}` : ''}/`;
 const SLOW_TIMESTEP = 0.004; // fallback if the machine can't hold 500 Hz
 
 const $ = (id) => document.getElementById(id);
@@ -149,6 +158,16 @@ async function main() {
 
   const mjScene = new MjThreeScene(mujoco, model, data, scene);
 
+  // Cartesian end-effector control: drag handles + differential IK feeding
+  // the arms' joint position actuators.
+  const controller = new BaseController(mujoco, model);
+  const arms = ['arm_0', 'arm_1'].map(
+    (p) => new ArmIK(mujoco, model, data, p, controller.qposAdr),
+  );
+  const handles = new EEHandles({
+    scene, camera, dom: renderer.domElement, controls, arms, data,
+  });
+
   function resize() {
     const w = stage.clientWidth;
     const h = stage.clientHeight;
@@ -160,7 +179,6 @@ async function main() {
   resize();
 
   // --- Teleop + UI state ----------------------------------------------------
-  const controller = new BaseController(mujoco, model);
   const ctrl = data.ctrl;
   const act = (name) => model.actuator(name).id;
   const actuators = {
@@ -191,7 +209,7 @@ async function main() {
     const vy = key('KeyA', 'KeyD') + key('ArrowLeft', 'ArrowRight') - movePad.x;
     const wz = key('KeyQ', 'KeyE') - rotPad.x;
     const c = (v) => Math.max(-1, Math.min(1, v));
-    return [c(vx) * VMAX, c(vy) * VMAX, c(wz) * WMAX];
+    return [c(vx) * VMAX, c(vy) * VMAX * LATERAL_SCALE, c(wz) * WMAX];
   }
 
   // Panel bindings.
@@ -220,6 +238,7 @@ async function main() {
     mujoco.mj_resetDataKeyframe(model, data, 0);
     data.ctrl.set(model.key_ctrl.subarray(0, model.nu));
     mujoco.mj_forward(model, data);
+    for (const arm of arms) arm.reset(data);
     for (const [id, val] of [['s-pan', 0], ['s-tilt', 0], ['s-lift', 0], ['s-grip', 255]]) {
       $(id).value = val;
     }
@@ -243,7 +262,7 @@ async function main() {
     if (document.hidden) { accum = 0; return; }
 
     if (!paused) {
-      controller.apply(data, desiredTwist(), dtWall);
+      const twist = desiredTwist();
       accum += dtWall;
       const maxSteps = Math.ceil(0.034 / timestep); // ≤ two frames of catch-up
       let steps = Math.floor(accum / timestep);
@@ -251,6 +270,8 @@ async function main() {
       if (steps > maxSteps) { steps = maxSteps; accum = 0; }
       const tBudget = performance.now() + 26; // keep the UI responsive
       for (; stepped < steps && performance.now() < tBudget; stepped++) {
+        controller.apply(data, twist, timestep);
+        for (const arm of arms) arm.step(data, timestep);
         mujoco.mj_step(model, data);
       }
       accum = Math.max(0, accum - stepped * timestep);
@@ -280,6 +301,7 @@ async function main() {
     sun.target.position.set(controls.target.x, controls.target.y, 0);
 
     mjScene.update();
+    handles.update();
     controls.update();
     renderer.render(scene, camera);
 
@@ -295,8 +317,8 @@ async function main() {
     renderer.render(scene, camera);
   };
   window.__garmi = {
-    mujoco, model, data, controller, keys, desiredTwist,
-    renderer, scene, camera, controls, renderOnce,
+    mujoco, model, data, controller, arms, handles, keys, desiredTwist,
+    renderer, scene, camera, controls, renderOnce, mjScene,
   };
   requestAnimationFrame((t) => { tPrev = t; requestAnimationFrame(frame); });
 }

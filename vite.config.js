@@ -2,6 +2,10 @@ import { defineConfig } from 'vite'
 import { resolve } from 'node:path'
 
 export default defineConfig({
+  // Expose the dev server on the LAN so phones on the same wifi can reach it
+  // (Vite binds to 127.0.0.1 by default).
+  server: { host: true },
+  preview: { host: true },
   // Deployed as a user site (jeanelsner.github.io) → served from the domain
   // root. If you ever deploy this from a project repo instead, set base to
   // '/<repo-name>/'.
