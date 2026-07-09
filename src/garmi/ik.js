@@ -54,7 +54,10 @@ export class ArmIK {
     this.jacr = new mujoco.DoubleBuffer(3 * this.nv);
     this.qHome = this.qadrs.map((a) => data.qpos[a]); // home keyframe is applied
     this.qTarget = [...this.qHome];
-    this.active = false; // becomes true on first drag; reset() clears it
+    // Always hold the Cartesian target (initially the home EE pose, a no-op),
+    // so the arm folds to track its handle as the lift raises the shoulders --
+    // not only after the handle has been dragged once.
+    this.active = true;
     this.targetLocal = this.#toLocal(data, this.eePos(data));
     this.rawTargetLocal = [...this.targetLocal];
   }
@@ -86,7 +89,7 @@ export class ArmIK {
   }
 
   reset(data) {
-    this.active = false;
+    this.active = true;
     this.qTarget = [...this.qHome];
     this.targetLocal = this.#toLocal(data, this.eePos(data));
     this.rawTargetLocal = [...this.targetLocal];
